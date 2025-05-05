@@ -1,6 +1,7 @@
 mod betweenness;
 mod path;
 mod utils;
+mod vertices;
 
 use std::{
     collections::{HashMap, HashSet},
@@ -11,42 +12,12 @@ use std::{
 use betweenness::Betweenness;
 use path::{Path, Paths};
 use utils::Utils;
+use vertices::{VertexData, VerticesData};
 
 #[derive(Default, Debug, Clone)]
 pub struct Graph<T> {
     pub vertices: HashSet<T>,
     pub adjacency: HashMap<T, Vec<T>>,
-}
-
-#[derive(Default, Debug)]
-pub struct VerticesData<T>(HashMap<T, VertexData>);
-
-impl<T> VerticesData<T>
-where
-    T: Eq + Hash + Clone,
-{
-    fn get_score(&self, vertex: &T) -> i32 {
-        self.0.get(vertex).unwrap().score
-    }
-
-    fn insert(&mut self, key: T, value: VertexData) {
-        self.0.insert(key, value);
-    }
-
-    fn get_mut(&mut self, vertex: &T) -> Option<&mut VertexData> {
-        self.0.get_mut(vertex)
-    }
-}
-#[derive(Debug)]
-pub struct VertexData {
-    score: i32,
-    distance: i32,
-}
-
-impl VertexData {
-    fn new(score: i32, distance: i32) -> Self {
-        Self { score, distance }
-    }
 }
 
 type Community<T> = HashSet<T>;
