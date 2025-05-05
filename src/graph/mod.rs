@@ -106,11 +106,7 @@ where
         let mut generated_communities: HashMap<i32, Vec<Community<T>>> = HashMap::new();
         let vertices: Vec<T> = self.vertices.iter().cloned().collect();
 
-        loop {
-            if !graph.has_edges() {
-                break;
-            }
-
+        while graph.has_edges() {
             let mut current_paths_queue: Paths<T> = Paths::default();
             let mut dead_end_paths: Paths<T> = Paths::default(); // Registra os caminhos que não possuem saída
             let mut betweenness: Betweenness<T> = Betweenness::default();
@@ -121,12 +117,7 @@ where
                 let mut vertices_data: VerticesData<T> = VerticesData::default();
                 vertices_data.insert(vertex.clone(), VertexData::new(1, 0));
 
-                loop {
-                    if current_paths_queue.is_empty() {
-                        break;
-                    }
-
-                    let last_path = current_paths_queue.pop().unwrap();
+                while let Some(last_path) = current_paths_queue.pop() {
                     let last_vertex = last_path.get_last_vertex().clone();
                     let neighbourhood = graph.adjacency.get(&last_vertex);
 
@@ -186,13 +177,7 @@ where
                  *  A partir das folhas, deve-se calcular o betweenness com base nos scores
                  *  gerados.
                  */
-                loop {
-                    if dead_end_paths.is_empty() {
-                        break;
-                    }
-
-                    let mut biggest_path = dead_end_paths.get_biggest_path().unwrap();
-
+                while let Some(mut biggest_path) = dead_end_paths.get_biggest_path() {
                     if biggest_path.len() == 1 {
                         continue;
                     }
