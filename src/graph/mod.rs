@@ -39,7 +39,6 @@ where
 }
 #[derive(Debug)]
 pub struct VertexData {
-    // Armazena os scores parciais, para recuperar o total, basta somar
     score: i32,
     distance: i32,
 }
