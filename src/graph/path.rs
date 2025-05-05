@@ -1,13 +1,13 @@
 use std::{collections::HashSet, hash::Hash};
 
 #[derive(Default)]
-pub struct Paths<Vertex>(Vec<Path<Vertex>>);
+pub struct Paths<T>(Vec<Path<T>>);
 
-impl<Vertex> Paths<Vertex>
+impl<T> Paths<T>
 where
-    Vertex: Eq + Hash + Clone,
+    T: Eq + Hash + Clone,
 {
-    pub fn push(&mut self, path: Path<Vertex>) {
+    pub fn push(&mut self, path: Path<T>) {
         self.0.push(path);
     }
 
@@ -15,15 +15,15 @@ where
         self.0.is_empty()
     }
 
-    pub fn pop(&mut self) -> Option<Path<Vertex>> {
+    pub fn pop(&mut self) -> Option<Path<T>> {
         self.0.pop()
     }
 
-    pub fn insert(&mut self, index: usize, path: Path<Vertex>) {
+    pub fn insert(&mut self, index: usize, path: Path<T>) {
         self.0.insert(index, path);
     }
 
-    pub fn get_biggest_path(&mut self) -> Option<Path<Vertex>> {
+    pub fn get_biggest_path(&mut self) -> Option<Path<T>> {
         if let Some((i, _)) = self.0.iter().enumerate().max_by_key(|(_, path)| path.len()) {
             return Some(self.0.swap_remove(i));
         }
@@ -33,16 +33,16 @@ where
 }
 
 #[derive(Default, Debug, Clone)]
-pub struct Path<Vertex> {
-    ordered: Vec<Vertex>,
-    vertices: HashSet<Vertex>,
+pub struct Path<T> {
+    ordered: Vec<T>,
+    vertices: HashSet<T>,
 }
 
-impl<Vertex> Path<Vertex>
+impl<T> Path<T>
 where
-    Vertex: Eq + Hash + Clone,
+    T: Eq + Hash + Clone,
 {
-    pub fn new(vertex: Vertex) -> Self {
+    pub fn new(vertex: T) -> Self {
         let ordered = vec![vertex.clone()];
         Self {
             ordered: ordered.clone(),
@@ -50,7 +50,7 @@ where
         }
     }
 
-    pub fn push(&mut self, vertex: Vertex) {
+    pub fn push(&mut self, vertex: T) {
         self.ordered.push(vertex.clone());
         self.vertices.insert(vertex);
     }
@@ -59,11 +59,11 @@ where
         self.ordered.remove(position);
     }
 
-    pub fn get_last_vertex(&self) -> &Vertex {
+    pub fn get_last_vertex(&self) -> &T {
         &self.ordered[self.ordered.len() - 1]
     }
 
-    pub fn contains(&self, vertex: &Vertex) -> bool {
+    pub fn contains(&self, vertex: &T) -> bool {
         self.vertices.contains(vertex)
     }
 
@@ -75,16 +75,16 @@ where
         self.ordered.reverse();
     }
 
-    pub fn get(&self, i: usize) -> Vertex {
+    pub fn get(&self, i: usize) -> T {
         self.ordered[i].clone()
     }
 }
 
-impl<Vertex> From<Vec<Vertex>> for Path<Vertex>
+impl<T> From<Vec<T>> for Path<T>
 where
-    Vertex: Eq + Hash + Clone,
+    T: Eq + Hash + Clone,
 {
-    fn from(value: Vec<Vertex>) -> Self {
+    fn from(value: Vec<T>) -> Self {
         Self {
             ordered: value.clone(),
             vertices: value.iter().cloned().collect(),

@@ -13,27 +13,27 @@ use path::{Path, Paths};
 use utils::Utils;
 
 #[derive(Default, Debug, Clone)]
-pub struct Graph<Vertex> {
-    pub vertices: HashSet<Vertex>,
-    pub adjacency: HashMap<Vertex, Vec<Vertex>>,
+pub struct Graph<T> {
+    pub vertices: HashSet<T>,
+    pub adjacency: HashMap<T, Vec<T>>,
 }
 
 #[derive(Default, Debug)]
-pub struct VerticesData<Vertex>(HashMap<Vertex, VertexData>);
+pub struct VerticesData<T>(HashMap<T, VertexData>);
 
-impl<Vertex> VerticesData<Vertex>
+impl<T> VerticesData<T>
 where
-    Vertex: Eq + Hash + Clone,
+    T: Eq + Hash + Clone,
 {
-    fn get_score(&self, vertex: &Vertex) -> i32 {
+    fn get_score(&self, vertex: &T) -> i32 {
         self.0.get(vertex).unwrap().score
     }
 
-    fn insert(&mut self, key: Vertex, value: VertexData) {
+    fn insert(&mut self, key: T, value: VertexData) {
         self.0.insert(key, value);
     }
 
-    fn get_mut(&mut self, vertex: &Vertex) -> Option<&mut VertexData> {
+    fn get_mut(&mut self, vertex: &T) -> Option<&mut VertexData> {
         self.0.get_mut(vertex)
     }
 }
@@ -49,11 +49,11 @@ impl VertexData {
     }
 }
 
-type Community<Vertex> = HashSet<Vertex>;
+type Community<T> = HashSet<T>;
 
-impl<Vertex> Graph<Vertex>
+impl<T> Graph<T>
 where
-    Vertex: Eq + Hash + Clone + Debug + From<i32> + Display + Default,
+    T: Eq + Hash + Clone + Debug + Display + Default,
 {
     pub fn new() -> Self {
         Graph {
@@ -62,16 +62,16 @@ where
         }
     }
 
-    pub fn push_vertex(&mut self, vertex: Vertex) {
+    pub fn push_vertex(&mut self, vertex: T) {
         self.vertices.insert(vertex);
     }
 
-    pub fn push_edge(&mut self, from: Vertex, to: Vertex) {
+    pub fn push_edge(&mut self, from: T, to: T) {
         let adjacent_to_from = self.adjacency.entry(from).or_default();
         adjacent_to_from.push(to);
     }
 
-    pub fn remove_edge(&mut self, from: Vertex, to: Vertex) {
+    pub fn remove_edge(&mut self, from: T, to: T) {
         if let Some(adjacency) = self.adjacency.get_mut(&from) {
             if let Some(position) = adjacency.iter().position(|vertex| *vertex == to) {
                 adjacency.swap_remove(position);
@@ -90,7 +90,7 @@ where
     }
 
     // Retorna as comunidades
-    pub fn get_communities(&self) -> Vec<Community<Vertex>> {
+    pub fn get_communities(&self) -> Vec<Community<T>> {
         let mut visited = HashSet::new();
         let mut communities = Vec::new();
 
@@ -132,22 +132,22 @@ where
 
     pub fn betweenness(&self) {
         let mut graph = self.clone();
-        let mut generated_communities: HashMap<i32, Vec<Community<Vertex>>> = HashMap::new();
-        let vertices: Vec<Vertex> = self.vertices.iter().cloned().collect();
+        let mut generated_communities: HashMap<i32, Vec<Community<T>>> = HashMap::new();
+        let vertices: Vec<T> = self.vertices.iter().cloned().collect();
 
         loop {
             if !graph.has_edges() {
                 break;
             }
 
-            let mut current_paths_queue: Paths<Vertex> = Paths::default();
-            let mut dead_end_paths: Paths<Vertex> = Paths::default(); // Registra os caminhos que não possuem saída
-            let mut betweenness: Betweenness<Vertex> = Betweenness::default();
+            let mut current_paths_queue: Paths<T> = Paths::default();
+            let mut dead_end_paths: Paths<T> = Paths::default(); // Registra os caminhos que não possuem saída
+            let mut betweenness: Betweenness<T> = Betweenness::default();
 
             for vertex in vertices.clone() {
                 current_paths_queue.push(Path::new(vertex.clone()));
 
-                let mut vertices_data: VerticesData<Vertex> = VerticesData::default();
+                let mut vertices_data: VerticesData<T> = VerticesData::default();
                 vertices_data.insert(vertex.clone(), VertexData::new(1, 0));
 
                 loop {
@@ -284,17 +284,17 @@ where
     }
 }
 
-impl<Vertex> From<Vec<[i32; 2]>> for Graph<Vertex>
+impl<T> From<Vec<[i32; 2]>> for Graph<T>
 where
-    Vertex: Eq + Hash + From<i32> + Clone + Debug + Display + Default,
+    T: Eq + Hash + From<i32> + Clone + Debug + Display + Default,
 {
     fn from(pairs: Vec<[i32; 2]>) -> Self {
         let mut graph = Graph::new();
 
         for [from, to] in pairs {
-            graph.push_edge(Vertex::from(from), Vertex::from(to));
-            graph.push_vertex(Vertex::from(to));
-            graph.push_vertex(Vertex::from(from));
+            graph.push_edge(T::from(from), T::from(to));
+            graph.push_vertex(T::from(to));
+            graph.push_vertex(T::from(from));
         }
 
         graph

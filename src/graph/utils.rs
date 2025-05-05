@@ -5,8 +5,8 @@ use super::Community;
 pub struct Utils;
 
 impl Utils {
-    pub fn persist_communities<Vertex: Display>(
-        communities: Vec<Community<Vertex>>,
+    pub fn persist_communities<T: Display>(
+        communities: Vec<Community<T>>,
         file_name: impl Into<String>,
     ) {
         let mut file = File::create(String::from("./out/") + &file_name.into() + ".txt")
