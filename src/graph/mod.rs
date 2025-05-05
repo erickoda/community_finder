@@ -1,16 +1,17 @@
 mod betweenness;
+mod edge;
 mod path;
 mod utils;
 mod vertices;
 
+use betweenness::Betweenness;
+use edge::Edge;
+use path::{Path, Paths};
 use std::{
     collections::{HashMap, HashSet},
     fmt::{Debug, Display},
     hash::Hash,
 };
-
-use betweenness::Betweenness;
-use path::{Path, Paths};
 use utils::Utils;
 use vertices::{VertexData, VerticesData};
 
@@ -37,14 +38,14 @@ where
         self.vertices.insert(vertex);
     }
 
-    pub fn push_edge(&mut self, from: T, to: T) {
-        let adjacent_to_from = self.adjacency.entry(from).or_default();
-        adjacent_to_from.push(to);
+    pub fn push_edge(&mut self, edge: &Edge<T>) {
+        let adjacent_to_from = self.adjacency.entry(edge.from.clone()).or_default();
+        adjacent_to_from.push(edge.to.clone());
     }
 
-    pub fn remove_edge(&mut self, from: T, to: T) {
-        if let Some(adjacency) = self.adjacency.get_mut(&from) {
-            if let Some(position) = adjacency.iter().position(|vertex| *vertex == to) {
+    pub fn remove_edge(&mut self, edge: &Edge<&T>) {
+        if let Some(adjacency) = self.adjacency.get_mut(edge.from) {
+            if let Some(position) = adjacency.iter().position(|vertex| vertex == edge.to) {
                 adjacency.swap_remove(position);
             }
         }
@@ -137,15 +138,11 @@ where
 
                     // Filtra os vizinhos que estão numa distância maior que a mínima
                     neighbourhood.retain(|neighbour| {
-                        if let Some(vertex) = vertices_data.get_mut(&neighbour) {
+                        if let Some(vertex) = vertices_data.get_mut(neighbour) {
                             // Verificar se o caminho também é ótimo
-                            if vertex.distance == last_path.len() as i32 {
-                                return true;
-                            } else {
-                                return false;
-                            }
+                            vertex.distance == last_path.len() as i32
                         } else {
-                            return true;
+                            true
                         }
                     });
 
@@ -188,9 +185,10 @@ where
 
                     biggest_path.revert_path();
 
-                    if !temp_betweenness
-                        .contains(&(biggest_path.get(0).clone(), biggest_path.get(1).clone()))
-                    {
+                    if !temp_betweenness.contains(&Edge {
+                        from: biggest_path.get(0),
+                        to: biggest_path.get(1),
+                    }) {
                         let score_i = vertices_data.get_score(&biggest_path.get(1)) as f64;
                         let score_j = vertices_data.get_score(&biggest_path.get(0)) as f64;
 
@@ -198,7 +196,10 @@ where
                             temp_betweenness.sum_of_bellow_edges(biggest_path.get(0));
 
                         temp_betweenness.insert_edge(
-                            (biggest_path.get(0).clone(), biggest_path.get(1).clone()),
+                            Edge {
+                                from: biggest_path.get(0),
+                                to: biggest_path.get(1),
+                            },
                             (1. + bellow_neighbourhood_score_sum) * (score_i / score_j),
                         );
                     }
@@ -206,7 +207,7 @@ where
                     biggest_path.remove(0);
                     biggest_path.revert_path();
 
-                    dead_end_paths.push(Path::from(biggest_path));
+                    dead_end_paths.push(biggest_path);
                 }
 
                 betweenness.sum(&temp_betweenness);
@@ -216,14 +217,14 @@ where
             let edge_with_biggest_betweenness = betweenness.get_max();
 
             // Remover a Edge
-            graph.remove_edge(
-                edge_with_biggest_betweenness.0.clone(),
-                edge_with_biggest_betweenness.1.clone(),
-            );
-            graph.remove_edge(
-                edge_with_biggest_betweenness.1.clone(),
-                edge_with_biggest_betweenness.0.clone(),
-            );
+            graph.remove_edge(&Edge {
+                from: &edge_with_biggest_betweenness.from,
+                to: &edge_with_biggest_betweenness.to,
+            });
+            graph.remove_edge(&Edge {
+                from: &edge_with_biggest_betweenness.to,
+                to: &edge_with_biggest_betweenness.from,
+            });
 
             // Registra a divisão da comunidade
             let communities = graph.get_communities();
@@ -246,7 +247,10 @@ where
         let mut graph = Graph::new();
 
         for [from, to] in pairs {
-            graph.push_edge(T::from(from), T::from(to));
+            graph.push_edge(&Edge {
+                from: T::from(from),
+                to: T::from(to),
+            });
             graph.push_vertex(T::from(to));
             graph.push_vertex(T::from(from));
         }
