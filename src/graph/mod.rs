@@ -123,15 +123,11 @@ where
                  */
                 while let Some(last_path) = current_paths_queue.pop() {
                     let last_vertex = last_path.get_last_vertex().clone();
-                    let neighbourhood = graph.adjacency.get(&last_vertex);
-
-                    // Verificar se a vizinhança é vazia
-                    if neighbourhood.is_none() {
-                        dead_end_paths.push(last_path.clone());
-                        continue;
-                    }
-
-                    let mut neighbourhood = neighbourhood.unwrap().clone();
+                    let mut neighbourhood = graph
+                        .adjacency
+                        .get(&last_vertex)
+                        .unwrap_or(&Vec::default())
+                        .clone();
 
                     // Filtra os vizinhos que já estão no caminho
                     neighbourhood.retain(|neighbour| !last_path.contains(neighbour));
@@ -147,7 +143,8 @@ where
                     });
 
                     if neighbourhood.is_empty() {
-                        dead_end_paths.push(last_path.clone());
+                        dead_end_paths.push(last_path);
+                        continue;
                     }
 
                     // Adiciona os vizinhos válidos no caminho e recalcula o score se necessário
