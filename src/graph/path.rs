@@ -11,10 +11,6 @@ where
         self.0.push(path);
     }
 
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-
     pub fn pop(&mut self) -> Option<Path<T>> {
         self.0.pop()
     }
