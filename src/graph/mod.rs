@@ -117,6 +117,9 @@ where
                 let mut vertices_data: VerticesData<T> = VerticesData::default();
                 vertices_data.insert(vertex.clone(), VertexData::new(1, 0));
 
+                /*
+                 *  Implementação de uma BFS para encontrar os menos caminhos e calcular os scores
+                 */
                 while let Some(last_path) = current_paths_queue.pop() {
                     let last_vertex = last_path.get_last_vertex().clone();
                     let neighbourhood = graph.adjacency.get(&last_vertex);
@@ -177,6 +180,7 @@ where
                  *  A partir das folhas, deve-se calcular o betweenness com base nos scores
                  *  gerados.
                  */
+                let mut temp_betweenness: Betweenness<T> = Betweenness::default();
                 while let Some(mut biggest_path) = dead_end_paths.get_biggest_path() {
                     if biggest_path.len() == 1 {
                         continue;
@@ -184,25 +188,17 @@ where
 
                     biggest_path.revert_path();
 
-                    if !betweenness.contains(&(
-                        vertex.clone(),
-                        biggest_path.get(0).clone(),
-                        biggest_path.get(1).clone(),
-                    )) {
+                    if !temp_betweenness
+                        .contains(&(biggest_path.get(0).clone(), biggest_path.get(1).clone()))
+                    {
                         let score_i = vertices_data.get_score(&biggest_path.get(1)) as f64;
                         let score_j = vertices_data.get_score(&biggest_path.get(0)) as f64;
 
-                        let bellow_neighbourhood_score_sum = betweenness.sum_of_bellow_edges(
-                            biggest_path.get(biggest_path.len() - 1),
-                            biggest_path.get(0),
-                        );
+                        let bellow_neighbourhood_score_sum =
+                            temp_betweenness.sum_of_bellow_edges(biggest_path.get(0));
 
-                        betweenness.insert_edge(
-                            (
-                                vertex.clone(),
-                                biggest_path.get(0).clone(),
-                                biggest_path.get(1).clone(),
-                            ),
+                        temp_betweenness.insert_edge(
+                            (biggest_path.get(0).clone(), biggest_path.get(1).clone()),
                             (1. + bellow_neighbourhood_score_sum) * (score_i / score_j),
                         );
                     }
@@ -212,6 +208,8 @@ where
 
                     dead_end_paths.push(Path::from(biggest_path));
                 }
+
+                betweenness.sum(&temp_betweenness);
             }
 
             // Calcular o maior betweenness
