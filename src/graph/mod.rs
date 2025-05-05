@@ -18,39 +18,34 @@ pub struct Graph<Vertex> {
     pub adjacency: HashMap<Vertex, Vec<Vertex>>,
 }
 
-#[derive(Default)]
-pub struct VerticesData<Vertex>(HashMap<Vertex, VertexData<Vertex>>);
+#[derive(Default, Debug)]
+pub struct VerticesData<Vertex>(HashMap<Vertex, VertexData>);
 
 impl<Vertex> VerticesData<Vertex>
 where
     Vertex: Eq + Hash + Clone,
 {
-    fn get_score(&self, vertex: &Vertex) -> f64 {
-        self.0
-            .get(vertex)
-            .unwrap()
-            .score
-            .iter()
-            .fold(0, |acc, crr| acc + crr.1) as f64
+    fn get_score(&self, vertex: &Vertex) -> i32 {
+        self.0.get(vertex).unwrap().score
     }
 
-    fn insert(&mut self, key: Vertex, value: VertexData<Vertex>) {
+    fn insert(&mut self, key: Vertex, value: VertexData) {
         self.0.insert(key, value);
     }
 
-    fn get_mut(&mut self, vertex: &Vertex) -> Option<&mut VertexData<Vertex>> {
+    fn get_mut(&mut self, vertex: &Vertex) -> Option<&mut VertexData> {
         self.0.get_mut(vertex)
     }
 }
-
-pub struct VertexData<Vertex> {
+#[derive(Debug)]
+pub struct VertexData {
     // Armazena os scores parciais, para recuperar o total, basta somar
-    score: HashMap<Vertex, i32>,
+    score: i32,
     distance: i32,
 }
 
-impl<Vertex> VertexData<Vertex> {
-    fn new(score: HashMap<Vertex, i32>, distance: i32) -> Self {
+impl VertexData {
+    fn new(score: i32, distance: i32) -> Self {
         Self { score, distance }
     }
 }
@@ -154,10 +149,7 @@ where
                 current_paths_queue.push(Path::new(vertex.clone()));
 
                 let mut vertices_data: VerticesData<Vertex> = VerticesData::default();
-                vertices_data.insert(
-                    vertex.clone(),
-                    VertexData::new(HashMap::from([(vertex.clone(), 1)]), 0),
-                );
+                vertices_data.insert(vertex.clone(), VertexData::new(1, 0));
 
                 loop {
                     if current_paths_queue.is_empty() {
@@ -166,7 +158,6 @@ where
 
                     let last_path = current_paths_queue.pop().unwrap();
                     let last_vertex = last_path.get_last_vertex().clone();
-                    let last_score = vertices_data.get_score(&last_vertex);
                     let neighbourhood = graph.adjacency.get(&last_vertex);
 
                     // Verificar se a vizinhança é vazia
@@ -199,22 +190,18 @@ where
                     }
 
                     // Adiciona os vizinhos válidos no caminho e recalcula o score se necessário
-                    // Todo: Sepa não precisa desse match
                     for neighbour in neighbourhood {
                         match vertices_data.get_mut(&neighbour) {
                             // Verificar se já chegou nesse nó por outro caminho
                             Some(data) => {
-                                data.score.insert(vertex.clone(), last_score as i32);
+                                data.score += 1;
                             }
 
                             // Caso o vértice ainda não tenha sido atingido
                             None => {
                                 vertices_data.insert(
                                     neighbour.clone(),
-                                    VertexData::new(
-                                        HashMap::from([(last_vertex.clone(), 1)]),
-                                        last_path.len() as i32,
-                                    ),
+                                    VertexData::new(1, last_path.len() as i32),
                                 );
                             }
                         }
@@ -229,7 +216,6 @@ where
                  *  A partir das folhas, deve-se calcular o betweenness com base nos scores
                  *  gerados.
                  */
-                // Todo: transforma isso num método da struct PATH e ter como retorno o edges_betweenness
                 loop {
                     if dead_end_paths.is_empty() {
                         break;
@@ -248,8 +234,8 @@ where
                         biggest_path.get(0).clone(),
                         biggest_path.get(1).clone(),
                     )) {
-                        let score_i = vertices_data.get_score(&biggest_path.get(1));
-                        let score_j = vertices_data.get_score(&biggest_path.get(0));
+                        let score_i = vertices_data.get_score(&biggest_path.get(1)) as f64;
+                        let score_j = vertices_data.get_score(&biggest_path.get(0)) as f64;
 
                         let bellow_neighbourhood_score_sum = betweenness.sum_of_bellow_edges(
                             biggest_path.get(biggest_path.len() - 1),
