@@ -112,7 +112,7 @@ where
             let mut dead_end_paths: Paths<T> = Paths::default(); // Registra os caminhos que não possuem saída
             let mut betweenness: Betweenness<T> = Betweenness::default();
 
-            for vertex in vertices.clone() {
+            for vertex in vertices.iter() {
                 current_paths_queue.push(Path::new(vertex.clone()));
 
                 let mut vertices_data: VerticesData<T> = VerticesData::default();
@@ -122,7 +122,7 @@ where
                  *  Implementação de uma BFS para encontrar os menos caminhos e calcular os scores
                  */
                 while let Some(last_path) = current_paths_queue.pop() {
-                    let last_vertex = last_path.get_last_vertex().clone();
+                    let last_vertex = last_path.get_last_vertex();
                     let mut neighbourhood = graph
                         .adjacency
                         .get(&last_vertex)
@@ -165,7 +165,7 @@ where
                         }
 
                         let mut new_path = last_path.clone();
-                        new_path.push(neighbour.clone());
+                        new_path.push(neighbour);
                         current_paths_queue.insert(0, new_path);
                     }
                 }
