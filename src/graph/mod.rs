@@ -7,6 +7,9 @@ mod vertices;
 use betweenness::Betweenness;
 use edge::Edge;
 use path::{Path, Paths};
+use rayon::prelude::*;
+use std::sync::{Arc, Mutex};
+use std::time::Instant;
 use std::{
     collections::{HashMap, HashSet},
     fmt::{Debug, Display},
@@ -25,7 +28,7 @@ type Community<T> = HashSet<T>;
 
 impl<T> Graph<T>
 where
-    T: Eq + Hash + Clone + Debug + Display + Default,
+    T: Send + Sync + Eq + Hash + Clone + Debug + Display + Default,
 {
     pub fn new() -> Self {
         Graph {
@@ -39,8 +42,10 @@ where
     }
 
     pub fn push_edge(&mut self, edge: &Edge<T>) {
-        let adjacent_to_from = self.adjacency.entry(edge.from.clone()).or_default();
-        adjacent_to_from.push(edge.to.clone());
+        self.adjacency
+            .entry(edge.from.clone())
+            .and_modify(|adjacency| adjacency.push(edge.to.clone()))
+            .or_insert(vec![edge.to.clone()]);
     }
 
     pub fn remove_edge(&mut self, edge: &Edge<&T>) {
@@ -107,13 +112,18 @@ where
         let mut generated_communities: HashMap<i32, Vec<Community<T>>> = HashMap::new();
         let vertices: Vec<T> = self.vertices.iter().cloned().collect();
 
+        let mut counter = 0;
         while graph.has_edges() {
-            let mut current_paths_queue: Paths<T> = Paths::default();
-            let mut dead_end_paths: Paths<T> = Paths::default(); // Registra os caminhos que não possuem saída
-            let mut betweenness: Betweenness<T> = Betweenness::default();
+            let start_iter = Instant::now();
 
-            for vertex in vertices.iter() {
-                current_paths_queue.push(Path::new(vertex.clone()));
+            // let mut betweenness: Betweenness<T> = Betweenness::default();
+            let betweenness = Arc::new(Mutex::new(Betweenness::default()));
+
+            vertices.par_iter().for_each(|vertex| {
+                let mut current_paths_queue: Paths<T> = Paths::default();
+                let mut dead_end_paths: Paths<T> = Paths::default(); // Registra os caminhos que não possuem saída
+
+                current_paths_queue.push_back(Path::new(vertex.clone()));
 
                 let mut vertices_data: VerticesData<T> = VerticesData::default();
                 vertices_data.insert(vertex.clone(), VertexData::new(1, 0));
@@ -121,13 +131,13 @@ where
                 /*
                  *  Implementação de uma BFS para encontrar os menos caminhos e calcular os scores
                  */
-                while let Some(last_path) = current_paths_queue.pop() {
+                while let Some(last_path) = current_paths_queue.pop_back() {
                     let last_vertex = last_path.get_last_vertex();
                     let mut neighbourhood = graph
                         .adjacency
-                        .get(&last_vertex)
-                        .unwrap_or(&Vec::default())
-                        .clone();
+                        .get(last_vertex)
+                        .cloned()
+                        .unwrap_or_default();
 
                     // Filtra os vizinhos que já estão no caminho
                     neighbourhood.retain(|neighbour| !last_path.contains(neighbour));
@@ -143,7 +153,7 @@ where
                     });
 
                     if neighbourhood.is_empty() {
-                        dead_end_paths.push(last_path);
+                        dead_end_paths.push_back(last_path);
                         continue;
                     }
 
@@ -166,7 +176,7 @@ where
 
                         let mut new_path = last_path.clone();
                         new_path.push(neighbour);
-                        current_paths_queue.insert(0, new_path);
+                        current_paths_queue.push_front(new_path);
                     }
                 }
 
@@ -175,43 +185,55 @@ where
                  *  gerados.
                  */
                 let mut temp_betweenness: Betweenness<T> = Betweenness::default();
-                while let Some(mut biggest_path) = dead_end_paths.get_biggest_path() {
-                    if biggest_path.len() == 1 {
-                        continue;
-                    }
+                while let Some(mut path) = dead_end_paths.pop_back() {
+                    path.revert_path();
 
-                    biggest_path.revert_path();
+                    let mut temp: f64 = 0.;
+                    for i in 0..path.len() - 1 {
+                        let score_i = vertices_data.get_score(&path.get(i + 1)) as f64;
+                        let score_j = vertices_data.get_score(&path.get(i)) as f64;
+                        let edge = Edge {
+                            from: path.get(i),
+                            to: path.get(i + 1),
+                        };
 
-                    if !temp_betweenness.contains(&Edge {
-                        from: biggest_path.get(0),
-                        to: biggest_path.get(1),
-                    }) {
-                        let score_i = vertices_data.get_score(&biggest_path.get(1)) as f64;
-                        let score_j = vertices_data.get_score(&biggest_path.get(0)) as f64;
+                        // Caso do nó ser folha
+                        if i == 0 {
+                            temp_betweenness.insert_edge(edge, score_i / score_j);
+                            temp = score_i / score_j;
+                            continue;
+                        }
 
-                        let bellow_neighbourhood_score_sum =
-                            temp_betweenness.sum_of_bellow_edges(biggest_path.get(0));
+                        // Caso que o nó já tem um valor atribuído, o
+                        if let Some(betweenness_value) = temp_betweenness.edges.get_mut(&edge) {
+                            *betweenness_value += temp * (score_i / score_j);
+                            temp *= score_i / score_j;
+                            continue;
+                        }
 
                         temp_betweenness.insert_edge(
                             Edge {
-                                from: biggest_path.get(0),
-                                to: biggest_path.get(1),
+                                from: path.get(i),
+                                to: path.get(i + 1),
                             },
-                            (1. + bellow_neighbourhood_score_sum) * (score_i / score_j),
+                            (1. + temp) * (score_i / score_j),
                         );
+                        temp = (1. + temp) * (score_i / score_j);
                     }
-
-                    biggest_path.remove(0);
-                    biggest_path.revert_path();
-
-                    dead_end_paths.push(biggest_path);
                 }
-
-                betweenness.sum(&temp_betweenness);
-            }
+                let mut global = betweenness.lock().unwrap();
+                global.sum(&temp_betweenness);
+            });
 
             // Calcular o maior betweenness
-            let edge_with_biggest_betweenness = betweenness.get_max();
+            // let edge_with_biggest_betweenness = betweenness.lock().unwrap().get_max();
+
+            if betweenness.lock().unwrap().get_max().is_none() {
+                break;
+            }
+
+            let edge_with_biggest_betweenness =
+                betweenness.lock().unwrap().get_max().unwrap().0.clone();
 
             // Remover a Edge
             graph.remove_edge(&Edge {
@@ -228,6 +250,10 @@ where
             generated_communities
                 .entry(communities.len() as i32)
                 .or_insert(communities);
+
+            println!("General Time {}: {:?}", counter, start_iter.elapsed());
+            println!();
+            counter += 1;
         }
 
         for communities in generated_communities {
@@ -236,20 +262,20 @@ where
     }
 }
 
-impl<T> From<Vec<[i32; 2]>> for Graph<T>
+impl<T> From<Vec<[T; 2]>> for Graph<T>
 where
-    T: Eq + Hash + From<i32> + Clone + Debug + Display + Default,
+    T: Send + Sync + Eq + Hash + Clone + Debug + Display + Default,
 {
-    fn from(pairs: Vec<[i32; 2]>) -> Self {
+    fn from(pairs: Vec<[T; 2]>) -> Self {
         let mut graph = Graph::new();
 
         for [from, to] in pairs {
             graph.push_edge(&Edge {
-                from: T::from(from),
-                to: T::from(to),
+                from: from.clone(),
+                to: to.clone(),
             });
-            graph.push_vertex(T::from(to));
-            graph.push_vertex(T::from(from));
+            graph.push_vertex(to);
+            graph.push_vertex(from);
         }
 
         graph

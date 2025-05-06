@@ -11,12 +11,10 @@ impl<T> Betweenness<T>
 where
     T: Eq + Hash + Clone,
 {
-    pub fn get_max(&self) -> &Edge<T> {
-        self.edges
-            .iter()
-            .max_by(|x, y| x.1.total_cmp(y.1))
-            .unwrap()
-            .0
+    pub fn get_max(&self) -> Option<(&Edge<T>, &f64)> {
+        self.edges.iter().max_by(|x, y| x.1.total_cmp(y.1))
+        // .unwrap()
+        // .0
     }
 
     pub fn sum(&mut self, x: &Self) {
@@ -38,20 +36,7 @@ where
         }
     }
 
-    pub fn contains(&self, key: &Edge<T>) -> bool {
-        self.edges.contains_key(key)
-    }
-
     pub fn insert_edge(&mut self, key: Edge<T>, value: f64) {
         self.edges.insert(key, value);
-    }
-
-    pub fn sum_of_bellow_edges(&self, to_vertex: T) -> f64 {
-        // Mudar a estrutura do Edges betweenness => o código
-        // abaixo não é performático
-        self.edges
-            .iter()
-            .filter(|(edge, _)| edge.to == to_vertex)
-            .fold(0., |acc, crr| acc + *crr.1)
     }
 }
