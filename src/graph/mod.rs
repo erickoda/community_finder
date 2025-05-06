@@ -44,7 +44,11 @@ where
     pub fn push_edge(&mut self, edge: &Edge<T>) {
         self.adjacency
             .entry(edge.from.clone())
-            .and_modify(|adjacency| adjacency.push(edge.to.clone()))
+            .and_modify(|adjacency| {
+                if !adjacency.contains(&edge.to.clone()) {
+                    adjacency.push(edge.to.clone())
+                }
+            })
             .or_insert(vec![edge.to.clone()]);
     }
 
@@ -188,45 +192,22 @@ where
                 while let Some(mut path) = dead_end_paths.pop_back() {
                     path.revert_path();
 
-                    let mut temp: f64 = 0.;
                     for i in 0..path.len() - 1 {
-                        let score_i = vertices_data.get_score(&path.get(i + 1)) as f64;
-                        let score_j = vertices_data.get_score(&path.get(i)) as f64;
                         let edge = Edge {
                             from: path.get(i),
                             to: path.get(i + 1),
                         };
 
-                        // Caso do nó ser folha
-                        if i == 0 {
-                            temp_betweenness.insert_edge(edge, score_i / score_j);
-                            temp = score_i / score_j;
-                            continue;
-                        }
-
-                        // Caso que o nó já tem um valor atribuído, o
-                        if let Some(betweenness_value) = temp_betweenness.edges.get_mut(&edge) {
-                            *betweenness_value += temp * (score_i / score_j);
-                            temp *= score_i / score_j;
-                            continue;
-                        }
-
-                        temp_betweenness.insert_edge(
-                            Edge {
-                                from: path.get(i),
-                                to: path.get(i + 1),
-                            },
-                            (1. + temp) * (score_i / score_j),
-                        );
-                        temp = (1. + temp) * (score_i / score_j);
+                        temp_betweenness
+                            .edges
+                            .entry(edge)
+                            .and_modify(|value| *value += i as f64 + 1.)
+                            .or_insert(1.);
                     }
                 }
                 let mut global = betweenness.lock().unwrap();
                 global.sum(&temp_betweenness);
             });
-
-            // Calcular o maior betweenness
-            // let edge_with_biggest_betweenness = betweenness.lock().unwrap().get_max();
 
             if betweenness.lock().unwrap().get_max().is_none() {
                 break;
@@ -270,9 +251,14 @@ where
         let mut graph = Graph::new();
 
         for [from, to] in pairs {
+            // Estou supondo que a rede é não direcionada
             graph.push_edge(&Edge {
                 from: from.clone(),
                 to: to.clone(),
+            });
+            graph.push_edge(&Edge {
+                to: from.clone(),
+                from: to.clone(),
             });
             graph.push_vertex(to);
             graph.push_vertex(from);

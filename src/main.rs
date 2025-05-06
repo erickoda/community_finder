@@ -5,7 +5,6 @@ use file::File;
 use graph::Graph;
 
 fn main() {
-    let graph = Graph::<String>::from(File::read("got-edges.txt"));
-    println!("{:?}", graph);
+    let graph = Graph::<i32>::from(File::read("email-Eu-core.txt"));
     graph.betweenness();
 }

@@ -21,6 +21,18 @@ where
     pub fn push_front(&mut self, path: Path<T>) {
         self.0.push_front(path);
     }
+
+    pub fn insert(&mut self, index: usize, path: Path<T>) {
+        self.0.insert(index, path);
+    }
+
+    pub fn get_biggest_path(&mut self) -> Option<Path<T>> {
+        if let Some((i, _)) = self.0.iter().enumerate().max_by_key(|(_, path)| path.len()) {
+            return self.0.swap_remove_back(i);
+        }
+
+        None
+    }
 }
 
 #[derive(Default, Debug, Clone)]
@@ -39,6 +51,10 @@ where
             ordered: ordered.clone(),
             vertices: ordered.iter().cloned().collect(),
         }
+    }
+
+    pub fn remove(&mut self, position: usize) {
+        self.ordered.remove(position);
     }
 
     pub fn push(&mut self, vertex: T) {
