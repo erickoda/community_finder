@@ -7,10 +7,6 @@ impl<T> VerticesData<T>
 where
     T: Eq + Hash + Clone,
 {
-    pub fn get_score(&self, vertex: &T) -> i32 {
-        self.0.get(vertex).unwrap().score
-    }
-
     pub fn insert(&mut self, key: T, value: VertexData) {
         self.0.insert(key, value);
     }

@@ -38,19 +38,6 @@ where
         }
     }
 
-    pub fn contains(&self, key: &Edge<T>) -> bool {
-        self.edges.contains_key(key)
-    }
-
-    pub fn sum_of_bellow_edges(&self, to_vertex: T) -> f64 {
-        // Mudar a estrutura do Edges betweenness => o código
-        // abaixo não é performático
-        self.edges
-            .iter()
-            .filter(|(edge, _)| edge.to == to_vertex)
-            .fold(0., |acc, crr| acc + *crr.1)
-    }
-
     pub fn insert_edge(&mut self, key: Edge<T>, value: f64) {
         self.edges.insert(key, value);
     }
