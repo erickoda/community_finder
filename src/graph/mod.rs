@@ -119,17 +119,15 @@ where
         let mut counter = 0;
         while graph.has_edges() {
             let start_iter = Instant::now();
-
-            // let mut betweenness: Betweenness<T> = Betweenness::default();
             let betweenness = Arc::new(Mutex::new(Betweenness::default()));
 
+            // It calculates the betweenness in parallel for each
             vertices.par_iter().for_each(|vertex| {
                 let mut current_paths_queue: Paths<T> = Paths::default();
                 let mut dead_end_paths: Paths<T> = Paths::default(); // Registra os caminhos que não possuem saída
+                let mut vertices_data: VerticesData<T> = VerticesData::default();
 
                 current_paths_queue.push_back(Path::new(vertex.clone()));
-
-                let mut vertices_data: VerticesData<T> = VerticesData::default();
                 vertices_data.insert(vertex.clone(), VertexData::new(1, 0));
 
                 /*
