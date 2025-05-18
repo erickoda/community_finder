@@ -1,6 +1,7 @@
 pub mod analyses;
 pub mod file;
 pub mod graph;
+pub mod utils;
 
 use std::time::Instant;
 
@@ -8,7 +9,7 @@ use file::File;
 use graph::Graph;
 
 fn main() {
-    let graph = Graph::<String>::from(File::read("soc-sign-bitcoinalpha.txt"));
+    let graph = Graph::<String>::from(File::read("caveman_graph_2.txt"));
     println!("{:?}", graph);
     let hierarchical_time = Instant::now();
     //graph.hierarchical_growth();
