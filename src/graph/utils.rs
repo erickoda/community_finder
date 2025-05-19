@@ -1,6 +1,6 @@
 use std::{fmt::Display, fs::File, io::Write};
 
-use super::Community;
+use super::undirected::Community;
 
 pub struct Utils;
 

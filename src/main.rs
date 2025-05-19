@@ -6,10 +6,10 @@ pub mod utils;
 use std::time::Instant;
 
 use file::File;
-use graph::Graph;
+use graph::undirected::UndirectedGraph;
 
 fn main() {
-    let graph = Graph::<String>::from(File::read("caveman_graph_2.txt"));
+    let graph = UndirectedGraph::<String>::from(File::read("caveman_graph_2.txt"));
     println!("{:?}", graph);
     let hierarchical_time = Instant::now();
     //graph.hierarchical_growth();
