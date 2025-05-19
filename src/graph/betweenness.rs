@@ -4,7 +4,7 @@ use super::edge::Edge;
 
 #[derive(Debug, Clone, Default)]
 pub struct Betweenness<T: Eq + Hash> {
-    pub edges: HashMap<Edge<T>, f64>,
+    pub values: HashMap<Edge<T>, f64>,
 }
 
 impl<T> Betweenness<T>
@@ -12,21 +12,19 @@ where
     T: Eq + Hash + Clone,
 {
     pub fn get_max(&self) -> Option<(&Edge<T>, &f64)> {
-        self.edges
+        self.values
             .iter()
             .max_by(|x, y| x.1.partial_cmp(y.1).unwrap_or(Ordering::Equal))
-        // .unwrap()
-        // .0
     }
 
     pub fn sum(&mut self, x: &Self) {
-        for (edge, temp_value) in x.edges.iter() {
-            if let Some(current_value) = self.edges.get_mut(edge) {
+        for (edge, temp_value) in x.values.iter() {
+            if let Some(current_value) = self.values.get_mut(edge) {
                 *current_value += temp_value;
                 continue;
             }
 
-            if let Some(current_value) = self.edges.get_mut(&Edge {
+            if let Some(current_value) = self.values.get_mut(&Edge {
                 from: edge.clone().to,
                 to: edge.clone().from,
             }) {
@@ -39,6 +37,6 @@ where
     }
 
     pub fn insert_edge(&mut self, key: Edge<T>, value: f64) {
-        self.edges.insert(key, value);
+        self.values.insert(key, value);
     }
 }

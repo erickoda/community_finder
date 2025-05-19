@@ -17,7 +17,7 @@ impl<T> UndirectedGraph<T>
 where
     T: Send + Sync + Eq + Hash + Clone + Debug + Display + Default,
 {
-    pub fn newmans_modularity_clustering(&self) {
+    pub fn newmans_modularity_clustering(&self) -> HashMap<usize, Vec<HashSet<T>>> {
         let total_of_edges = self.get_total_of_edges() as f64;
         let mut partitions: HashMap<usize, (Vec<Community<T>>, f64)> = HashMap::new();
         let mut communities: HashMap<usize, HashSet<T>> = HashMap::new();
@@ -118,5 +118,10 @@ where
                 format!("{}_{}", communities.0.len(), communities.1),
             );
         }
+
+        partitions
+            .iter()
+            .map(|(key, value)| (*key, value.0.clone()))
+            .collect::<HashMap<_, _>>()
     }
 }
